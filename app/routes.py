@@ -21,8 +21,7 @@ def login_required(f):
 
         try:
             # decoding the payload to fetch the stored details
-            data = jwt.decode(token, 'secret', algorithms=["HS256"])
-            current_user = mongo.db.user.find_one({'_id':data['_id']})
+            current_user = jwt.decode(token, 'secret', algorithms=["HS256"])
         except Exception as e:
             print(e)
             return make_response(jsonify({
@@ -87,8 +86,9 @@ def create_template(current_user):
     template_name = request.json['template_name']
     subject = request.json['subject']
     body = request.json['body']
+    print(current_user)
     # insert the data to the database
-    mongo.db.template.insert_one({"template_name":template_name,"subject":subject,"body":body})
+    mongo.db.template.insert_one({"template_name":template_name,"subject":subject,"body":body, "user_id":current_user['_id']})
     template = mongo.db.template.find_one({'template_name':template_name})
     return make_response(jsonify({
         "status":"success",
@@ -96,10 +96,20 @@ def create_template(current_user):
         "data":json.loads(json_util.dumps(template)),
     }), 201)
 
+@app.route('/template', methods=['GET'])
+@login_required
+def get_all_templates(current_user):
+    user_templates = mongo.db.template.find({'user_id':current_user['_id']})
+    return make_response(jsonify({
+        "status":"success",
+        "message":"retrieved successfully",
+        "data":json.loads(json_util.dumps(user_templates)),
+    }), 200)
+
 @app.route('/template/<template_id>', methods=['GET'])
 @login_required
 def get_template(current_user, template_id):
-    template = mongo.db.template.find_one({'_id':ObjectId(template_id)})
+    template = mongo.db.template.find_one({'_id':ObjectId(template_id),'user_id':str(current_user['_id'])})
     return make_response(jsonify({
         "status":"success",
         "message":"retrieved successfully",
@@ -114,7 +124,7 @@ def update_template(current_user, template_id):
     subject = request.json['subject']
     body = request.json['body']
 
-    db_template = mongo.db.template.find_one({'_id':ObjectId(template_id)})
+    db_template = mongo.db.template.find_one({'_id':ObjectId(template_id),'user_id':str(current_user['_id'])})
 
     if template_name == "":
         template_name = db_template['template_name']
@@ -143,7 +153,7 @@ def update_template(current_user, template_id):
 @app.route('/template/<template_id>', methods=['DELETE'])
 @login_required
 def delete_template(current_user, template_id):
-    mongo.db.template.find_one_and_delete({'_id':ObjectId(template_id)})
+    mongo.db.template.find_one_and_delete({'_id':ObjectId(template_id),'user_id':str(current_user['_id'])})
     return make_response(jsonify({
         "status":"success",
         "message":"deleted successfully",
