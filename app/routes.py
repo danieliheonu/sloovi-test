@@ -120,42 +120,34 @@ def get_template(current_user, template_id):
 @login_required
 def update_template(current_user, template_id):
 
-    # template_name = request.json['template_name']
-    # subject = request.json['subject']
-    # body = request.json['body']
-
     db_template = mongo.db.template.find_one({'_id':ObjectId(template_id),'user_id':str(current_user['_id'])})
 
-    # if template_name == "":
-    #     template_name = db_template['template_name']
-    # else:
-    #     template_name = template_name
-        
-    # if subject == "":
-    #     subject = db_template['subject']
-    # else:
-    #     subject = subject
+    if db_template:
 
-    # if body == "":
-    #     body = db_template['body']
-    # else:
-    #     body = body
-
-
-    # mongo.db.template.find_one_and_update({'_id':ObjectId(template_id)}, {"$set": {"template_name":template_name,"subject":subject,"body":body} })
-    mongo.db.template.find_one_and_update({'_id':ObjectId(template_id)}, {"$set": request.get_json() })
-    updated_template = mongo.db.template.find_one({"_id":ObjectId(template_id)})
+        mongo.db.template.find_one_and_update({'_id':ObjectId(template_id)}, {"$set": request.get_json() })
+        updated_template = mongo.db.template.find_one({"_id":ObjectId(template_id)})
+        return make_response(jsonify({
+            "status":"success",
+            "message":"updated successfully",
+            "data":json.loads(json_util.dumps(updated_template)),
+        }), 200)
     return make_response(jsonify({
-        "status":"success",
-        "message":"updated successfully",
-        "data":json.loads(json_util.dumps(updated_template)),
-    }), 200)
+        "status":"failed",
+        "message":"you can't update the document of another user"
+    }), 403)
 
 @app.route('/template/<template_id>', methods=['DELETE'])
 @login_required
 def delete_template(current_user, template_id):
-    mongo.db.template.find_one_and_delete({'_id':ObjectId(template_id),'user_id':str(current_user['_id'])})
+    db_template = mongo.db.template.find_one({'_id':ObjectId(template_id),'user_id':str(current_user['_id'])})
+
+    if db_template:
+        mongo.db.template.find_one_and_delete({'_id':ObjectId(template_id),'user_id':str(current_user['_id'])})
+        return make_response(jsonify({
+            "status":"success",
+            "message":"deleted successfully",
+        }), 200)
     return make_response(jsonify({
-        "status":"success",
-        "message":"deleted successfully",
-    }), 200)
+        "status":"failed",
+        "message":"you can't delete the document of another user"
+    }), 403)
