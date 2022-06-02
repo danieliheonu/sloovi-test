@@ -120,29 +120,30 @@ def get_template(current_user, template_id):
 @login_required
 def update_template(current_user, template_id):
 
-    template_name = request.json['template_name']
-    subject = request.json['subject']
-    body = request.json['body']
+    # template_name = request.json['template_name']
+    # subject = request.json['subject']
+    # body = request.json['body']
 
     db_template = mongo.db.template.find_one({'_id':ObjectId(template_id),'user_id':str(current_user['_id'])})
 
-    if template_name == "":
-        template_name = db_template['template_name']
-    else:
-        template_name = template_name
+    # if template_name == "":
+    #     template_name = db_template['template_name']
+    # else:
+    #     template_name = template_name
         
-    if subject == "":
-        subject = db_template['subject']
-    else:
-        subject = subject
+    # if subject == "":
+    #     subject = db_template['subject']
+    # else:
+    #     subject = subject
 
-    if body == "":
-        body = db_template['body']
-    else:
-        body = body
+    # if body == "":
+    #     body = db_template['body']
+    # else:
+    #     body = body
 
 
-    mongo.db.template.find_one_and_update({'_id':ObjectId(template_id)}, {"$set": {"template_name":template_name,"subject":subject,"body":body} })
+    # mongo.db.template.find_one_and_update({'_id':ObjectId(template_id)}, {"$set": {"template_name":template_name,"subject":subject,"body":body} })
+    mongo.db.template.find_one_and_update({'_id':ObjectId(template_id)}, {"$set": request.get_json() })
     updated_template = mongo.db.template.find_one({"_id":ObjectId(template_id)})
     return make_response(jsonify({
         "status":"success",
