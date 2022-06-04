@@ -7,6 +7,8 @@ from bson import json_util
 from bson.objectid import  ObjectId
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
+from jsonschema import validate
+from jsonschema.exceptions import ValidationError
 
 def login_required(f):
     @wraps(f)
@@ -36,25 +38,38 @@ def login_required(f):
 def register():
     first_name = request.json['first_name']
     last_name = request.json['last_name']
-    email = request.json['email']
+    email = request.json['email'].strip()
     password = generate_password_hash(request.json['password'])
     # check if the user exits
     db_user = mongo.db.user.find_one({'email':email})
     if db_user:
         return make_response(jsonify({
         "status":"success",
-        "message":"user exists",
-        "data":json.loads(json_util.dumps(db_user))
+        "message":"user exists"
     }), 200)
 
     # insert the data into the database
-    mongo.db.user.insert_one({'first_name':first_name, 'last_name':last_name,'email':email,'password':password})
-    user = mongo.db.user.find_one({'first_name':first_name})
-    return make_response(jsonify({
-        "status":"success",
-        "message":"added successfully",
-        "data":json.loads(json_util.dumps(user))
-    }), 201)
+    schema = {
+        "type": "object",
+        "properties": {
+            "email": {"type": "string", "pattern":"^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$"},
+        },
+    }
+    try:
+        user = {'first_name':first_name, 'last_name':last_name,'email':email,'password':password}
+        validate(instance=user, schema=schema)           
+        mongo.db.user.insert_one(user)
+        user = mongo.db.user.find_one({'first_name':first_name})
+        return make_response(jsonify({
+            "status":"success",
+            "message":"added successfully"
+        }), 201)
+    except ValidationError:
+        return make_response(jsonify({
+                "status":"fail",
+                "message":"email doesnt make the a valid email"
+            }), 400)
+
 
 @app.route('/login', methods=['POST'])
 def login():
